@@ -1,0 +1,20 @@
+node_modules/
+.env
+*.pem
+*.pub
+*.log
+
+# Docker
+.dockerignore
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/.terraform.lock.hcl
+infra/terraform.tfvars
+
+# OS & Editor
+.history/
+.DS_Store
+Thumbs.db
