@@ -17,24 +17,22 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
           chmod 600 key.pem
 
-      - name: Deploy to EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+      - name: Deploy container to EC2
+  run: |
+    ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
 
-            echo "Logging into Docker Hub..."
-            sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+      echo "Pulling latest image..."
+      sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:latest
 
-            echo "Stopping old container..."
-            sudo docker stop hospital-app || true
+      echo "Stopping old container..."
+      sudo docker stop hospital-app || true
 
-            echo "Removing old container..."
-            sudo docker rm hospital-app || true
+      echo "Removing old container..."
+      sudo docker rm hospital-app || true
 
-            echo "Pulling latest image..."
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKER_REPO }}:latest
+      echo "Running new container..."
+      sudo docker run -d --name hospital-app -p 80:3000 \
+        ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:latest
 
-            echo "Running new container..."
-            sudo docker run -d --name hospital-app -p 80:3000 \
-              ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKER_REPO }}:latest
+    EOF
 
-          EOF
