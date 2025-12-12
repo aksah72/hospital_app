@@ -1,82 +1,30 @@
-name: Infrastructure & App Deploy
+name: Deploy to EC2 Server
 
 on:
-  workflow_run:
-    workflows: ["Build and Push Docker image"]
-    types: [ completed ]
+  push:
+    branches: [ main ]
 
 jobs:
-  terraform-and-deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  deploy:
     runs-on: ubuntu-latest
-    environment: production
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: true
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: "1.6.0"
-
-      - name: Init Terraform
-        working-directory: infra
-        run: terraform init -input=false
-
-      - name: Terraform Validate
-        working-directory: infra
-        run: terraform validate
-
-      - name: Terraform Plan
-        working-directory: infra
-        run: terraform plan -input=false -out=tfplan
-
-      - name: Terraform Apply
-        working-directory: infra
-        # auto-approve only if you are comfortable that CI runs are safe
-        run: terraform apply -input=false -auto-approve tfplan
-
-      - name: Get public IP from terraform output
-        id: tfout
-        working-directory: infra
+      # Save EC2 private key
+      - name: Save EC2 SSH key
         run: |
-          echo "::set-output name=public_ip::$(terraform output -raw public_ip || terraform output public_ip)"
-      - name: Show public ip
-        run: echo "Public IP: ${{ steps.tfout.outputs.public_ip }}"
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
+          chmod 600 key.pem
 
-      # --- Deploy to EC2: graceful update of Docker container ---
-      - name: Prepare SSH key
+      # SSH and deploy container
+      - name: Deploy container on EC2
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-      - name: Add host to known_hosts (optional but recommended)
-        run: |
-          ssh-keyscan -H ${{ steps.tfout.outputs.public_ip }} >> ~/.ssh/known_hosts || true
-
-      - name: Update app on EC2 (graceful restart)
-        env:
-          IMAGE: ${{ secrets.IMAGE_NAME }}:latest
-          MONGO_URI: ${{ secrets.TF_VAR_mongodb_uri }}
-          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
-        run: |
-          set -e
-          HOST=${{ steps.tfout.outputs.public_ip }}
-          SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes ec2-user@${HOST}"
-          echo "Pulling image on remote..."
-          $SSH "docker pull ${IMAGE} || exit 2"
-          echo "Stopping existing container (if exists) and starting new container..."
-          # create a backup name for zero-downtime attempt; this is simple swap
-          $SSH "if docker ps -q --filter name=hospital-app | grep -q .; then docker stop hospital-app && docker rm hospital-app; fi || true"
-          $SSH "docker run -d --restart unless-stopped --name hospital-app -p 80:3000 -e MONGODB_URI='${MONGO_URI}' -e SESSION_SECRET='${SESSION_SECRET}' ${IMAGE}"
-          echo "Deployment done."
+          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:latest
+            sudo docker stop hospital-app || true
+            sudo docker rm hospital-app || true
+            sudo docker run -d --name hospital-app -p 80:3000 \
+              ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:latest
+          EOF
