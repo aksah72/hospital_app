@@ -1,6 +1,5 @@
 name: Build and Push Docker Image
 
-# trigger on push to main (adjust branch as needed)
 on:
   push:
     branches:
@@ -15,33 +14,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Pull the repository code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (for multi-platform builds, optional)
+      # Enable QEMU (optional)
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
+      # Enable Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      # Login to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Build and push image
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./Dockerfile            # adjust path if your Dockerfile is elsewhere
+          file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.DOCKER_REPO }}:latest
-            ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.DOCKER_REPO }}:${{ github.sha }}
-          # platforms: linux/amd64,linux/arm64   # uncomment if you want multi-arch
+            ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:${{ github.sha }}
 
+      # Print output for debugging
       - name: Image info
         run: |
-          echo "Image pushed to: ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.DOCKER_REPO }}:latest"
-          echo "Commit: ${GITHUB_SHA}"
+          echo "Image pushed: ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:latest"
+          echo "Commit SHA: ${{ github.sha }}"
