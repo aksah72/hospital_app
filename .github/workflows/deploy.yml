@@ -1,46 +1,28 @@
-name: CI/CD Pipeline - Hospital App
+name: Deploy to EC2 Server
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
 
 jobs:
-  build_and_push:
-    name: Build & Push Docker Image
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Save EC2 private key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
+          chmod 600 key.pem
 
-    - name: Build Docker image
-      run: docker build -t aksah22/hospital-app:latest .
-
-    - name: Push Docker image to Docker Hub
-      run: docker push aksah22/hospital-app:latest
-
-  deploy_to_ec2:
-    name: Deploy to EC2 Server
-    runs-on: ubuntu-latest
-    needs: build_and_push
-
-    steps:
-    - name: Save EC2 SSH key
-      run: |
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
-        chmod 600 key.pem
-
-    - name: Deploy container on EC2 via SSH
-      run: |
-        ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-          docker pull aksah22/hospital-app:latest
-          docker stop hospital-app || true
-          docker rm hospital-app || true
-          docker run -d -p 80:3000 --name hospital-app aksah22/hospital-app:latest
-        EOF
+      - name: Deploy container to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:latest
+            sudo docker stop hospital-app || true
+            sudo docker rm hospital-app || true
+            sudo docker run -d --name hospital-app -p 80:3000 \
+              ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:latest
+          EOF
