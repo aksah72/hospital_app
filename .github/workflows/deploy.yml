@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Save EC2 private key
@@ -25,15 +25,14 @@ jobs:
             echo "Logging into Docker Hub..."
             sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
 
-            echo "Stopping and removing ANY previous hospital-app containers..."
+            echo "Deleting ALL containers named hospital-app..."
             sudo docker ps -aq --filter "name=hospital-app" | xargs -r sudo docker rm -f
 
-            echo "Pulling latest Docker image..."
+            echo "Pulling latest image..."
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKER_REPO }}:latest
 
             echo "Starting new container..."
             sudo docker run -d --name hospital-app -p 80:3000 \
               ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKER_REPO }}:latest
 
-            echo "Deployment completed!"
           EOF
