@@ -19,10 +19,12 @@ jobs:
 
       - name: Deploy container to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:latest
+          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
             sudo docker stop hospital-app || true
             sudo docker rm hospital-app || true
+            
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKER_REPO }}:latest
+            
             sudo docker run -d --name hospital-app -p 80:3000 \
-              ${{ secrets.DOCKERHUB_USERNAME }}/hospital-app:latest
+              ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKER_REPO }}:latest
           EOF
