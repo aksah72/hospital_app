@@ -20,10 +20,10 @@ jobs:
       - name: Deploy container on EC2
         run: |
           ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            echo "Stopping old container..."
+            echo "Stopping container if running..."
             sudo docker stop hospital-app || true
 
-            echo "Removing old container..."
+            echo "Removing container if exists..."
             sudo docker rm hospital-app || true
 
             echo "Pruning unused images..."
@@ -34,4 +34,4 @@ jobs:
 
             echo "Starting new container..."
             sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
-            EOF
+EOF
