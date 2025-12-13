@@ -137,6 +137,7 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
   });
 });
+console.log("Deploy test");
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`App running at http://localhost:${PORT}`);
