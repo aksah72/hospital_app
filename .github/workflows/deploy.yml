@@ -2,51 +2,52 @@ name: Deploy to EC2 Server
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ] # This workflow runs when code is pushed to the 'main' branch
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Specify the runner environment
 
     steps:
       - name: 📦 Checkout repository
-        uses: actions/checkout@v4 # Use the latest version
+        uses: actions/checkout@v4 # Use the latest version of the checkout action
 
       - name: 🔑 Set up SSH key
-        # Use the official SSH action for better security and handling
+        # Action to securely load the private key into the SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        # The key is now available for the following 'ssh' command
 
       - name: 🚢 Deploy container on EC2
-        # Use 'ssh' for the connection and pipe the commands for better readability
-        # The key is automatically used by the ssh-agent
+        # Use 'ssh' to connect to the EC2 instance and pipe the multi-line command block
         run: |
-          # The key is managed by the ssh-agent, so we don't need -i and 'hospital-key.pem' file
+          # Connect to EC2 using the key managed by the ssh-agent
+          # StrictHostKeyChecking=no is necessary for non-interactive first connection
           ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "bash -s" << 'EOF'
-            set -e # Exit immediately if a command exits with a non-zero status.
+            set -e # Exit immediately if a command fails (critical for stability)
 
             echo "Starting deployment on EC2..."
-            
-            # Use '|| true' only if you are certain the commands might fail 
-            # and it should not halt the script (e.g., stopping/removing a non-existent container)
 
+            # Stop and remove the existing container gracefully
             echo "Stopping old container..."
             sudo docker stop hospital-app || true
 
             echo "Removing old container..."
             sudo docker rm hospital-app || true
 
+            # Clean up old, dangling images to save space
             echo "Pruning unused images..."
             sudo docker image prune -af
 
+            # Pull the latest image from your registry (e.g., Docker Hub)
             echo "Pulling latest image..."
-            # Replace 'aksah22' with your actual Docker Hub username/registry
             sudo docker pull aksah22/hospital-app:latest
 
+            # Start a new container with the latest image
             echo "Starting new container..."
-            # Always ensure your ports are correct (e.g., 3000:3000)
+            # -d: detached mode, --name: container name, -p: port mapping (host:container)
             sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
 
             echo "Deployment complete."
-EOF
+EOF # CRITICAL FIX: The closing EOF must have ZERO leading whitespace.
