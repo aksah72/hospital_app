@@ -46,4 +46,4 @@ jobs:
             sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
 
             echo "Deployment complete."
-EOF
+          EOF
