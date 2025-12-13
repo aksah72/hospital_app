@@ -13,13 +13,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔑 Set up SSH key
-        # Use the official SSH action for better security and handling
+        # Action to securely load the private key into the SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: 🚢 Deploy container on EC2
-        # Use 'ssh' for the connection and pipe the commands
+        # Use 'ssh' to connect to the EC2 instance and pipe the multi-line command block
         run: |
           ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "bash -s" << 'EOF'
             set -e # Exit immediately if a command fails
@@ -42,4 +42,4 @@ jobs:
             sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
 
             echo "Deployment complete."
-EOF # <--- THIS LINE MUST BE FLUSH LEFT, WITH NO SPACES BEFORE IT
+EOF # <--- Must be flush left, no spaces or tabs!
