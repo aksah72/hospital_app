@@ -21,23 +21,21 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
           
-          echo "Stopping old container (if exists)..."
-          sudo docker stop hospital-app || true
+          echo "Stopping old container..."
+sudo docker stop hospital-app || true
 
-          echo "Removing old container (if exists)..."
-          sudo docker rm hospital-app || true
+echo "Removing old container..."
+sudo docker rm hospital-app || true
 
-          echo "Removing dangling images..."
-          sudo docker image prune -f || true
+echo "Removing old images..."
+sudo docker image prune -f || true
 
-          echo "Pulling latest image..."
-          sudo docker pull aksah22/hospital-app:latest
+echo "Pulling latest image..."
+sudo docker pull aksah22/hospital-app:latest
 
-          echo "Starting new container..."
-          sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
+echo "Starting new container on port 3000..."
+sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
 
-          echo "Deployment completed!"
-          sudo docker ps
           EOF
 
 
