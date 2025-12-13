@@ -34,4 +34,4 @@ jobs:
 
             echo "Starting new container..."
             sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
-EOF
+            EOF
