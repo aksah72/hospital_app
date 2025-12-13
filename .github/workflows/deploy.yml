@@ -50,4 +50,4 @@ jobs:
             sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
 
             echo "Deployment complete."
-EOF # CRITICAL FIX: The closing EOF must have ZERO leading whitespace.
+EOF
