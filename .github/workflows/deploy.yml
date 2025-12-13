@@ -22,24 +22,28 @@ jobs:
         # Use 'ssh' to connect to the EC2 instance and pipe the multi-line command block
         run: |
           ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "bash -s" << 'EOF'
-            set -e # Exit immediately if a command fails
+            set -e # Exit immediately if a command fails (critical for stability)
 
             echo "Starting deployment on EC2..."
 
+            # Stop and remove the existing container gracefully
             echo "Stopping old container..."
             sudo docker stop hospital-app || true
 
             echo "Removing old container..."
             sudo docker rm hospital-app || true
 
+            # Clean up old, dangling images to save space
             echo "Pruning unused images..."
             sudo docker image prune -af
 
+            # Pull the latest image from your registry (e.g., Docker Hub)
             echo "Pulling latest image..."
             sudo docker pull aksah22/hospital-app:latest
 
+            # Start a new container with the latest image
             echo "Starting new container..."
             sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
 
             echo "Deployment complete."
-EOF # <--- Must be flush left, no spaces or tabs!
+EOF
