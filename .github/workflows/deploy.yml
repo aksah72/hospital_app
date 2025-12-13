@@ -2,34 +2,37 @@ name: Deploy to EC2 Server
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📦 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔑 Set up SSH key
-        # Action to securely load the private key into the SSH agent
+      - name: Set up SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-            - name: Deploy container on EC2
+      - name: Deploy container on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i hospital-key.pem ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-echo "Force removing old container if exists..."
-sudo docker rm -f hospital-app || true
+          ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+            echo "Stopping & removing old container..."
+            sudo docker rm -f hospital-app || true
 
-echo "Pruning unused images..."
-sudo docker image prune -af || true
+            echo "Pruning unused images..."
+            sudo docker image prune -af || true
 
-echo "Pulling latest image..."
-sudo docker pull aksah22/hospital-app:latest
+            echo "Pulling latest image..."
+            sudo docker pull aksah22/hospital-app:latest
 
-echo "Starting new container..."
-sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
-EOF
+            echo "Starting new container..."
+            sudo docker run -d \
+              --name hospital-app \
+              -p 3000:3000 \
+              aksah22/hospital-app:latest
+          EOF
