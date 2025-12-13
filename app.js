@@ -60,9 +60,23 @@ app.get('/', requireLogin, (req, res) => {
 });
 
 app.get('/appointments', requireLogin, async (req, res) => {
-  const appointments = await Appointment.find().populate('createdBy').sort({ createdAt: -1 }).lean();
+
+  const currentUser = res.locals.currentUser;
+
+  const isStaff = currentUser && currentUser.role === 'staff';
+
+  const filter = isStaff
+    ? {}                                  // staff sees ALL
+    : { createdBy: req.session.userId };  // normal user sees ONLY their own
+
+  const appointments = await Appointment.find(filter)
+    .populate('createdBy')
+    .sort({ createdAt: -1 })
+    .lean();
+
   res.render('appointments', { title: 'All Appointments', appointments });
 });
+
 
 app.post('/book', requireLogin, async (req, res) => {
   const { patientName, patientEmail, doctor, date, time } = req.body;
