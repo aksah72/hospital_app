@@ -14,24 +14,24 @@ jobs:
 
       - name: Save EC2 private key
         run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
-          chmod 600 key.pem
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > hospital-key.pem
+          chmod 600 hospital-key.pem
 
       - name: Deploy container on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-echo "Stopping old container..."
-sudo docker stop hospital-app || true
+          ssh -o StrictHostKeyChecking=no -i hospital-key.pem ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+          echo "Stopping old container..."
+          sudo docker stop hospital-app || true
 
-echo "Removing old container..."
-sudo docker rm hospital-app || true
+          echo "Removing old container..."
+          sudo docker rm hospital-app || true
 
-echo "Pruning unused images..."
-sudo docker image prune -af || true
+          echo "Pruning unused images..."
+          sudo docker image prune -af || true
 
-echo "Pulling latest image..."
-sudo docker pull aksah22/hospital-app:latest
+          echo "Pulling latest image..."
+          sudo docker pull aksah22/hospital-app:latest
 
-echo "Starting new container..."
-sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
+          echo "Starting new container..."
+          sudo docker run -d --name hospital-app -p 3000:3000 aksah22/hospital-app:latest
 EOF
