@@ -12,13 +12,26 @@ const Appointment = require('./models/appointment');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/hospital_app';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error("❌ MONGODB_URI is NOT defined");
+  process.exit(1);
+}
+
 const SESSION_SECRET = process.env.SESSION_SECRET || 'changeme';
 
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB error', err));
+mongoose.connect(MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 10000
+})
+.then(() => console.log("MongoDB connected"))
+.catch(err => {
+  console.error("MongoDB connection failed:", err);
+  process.exit(1);
+});
+
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
