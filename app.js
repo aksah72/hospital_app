@@ -1,3 +1,9 @@
+/*function isWeekday(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay(); // 0 = Sunday, 6 = Saturday
+  return day !== 0 && day !== 6;
+}*/
+
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -21,16 +27,14 @@ if (!MONGODB_URI) {
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'changeme';
 
-mongoose.connect(MONGODB_URI, {
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 10000
+  serverSelectionTimeoutMS: 15000
 })
 .then(() => console.log("MongoDB connected"))
-.catch(err => {
-  console.error("MongoDB connection failed:", err);
-  process.exit(1);
-});
+.catch(err => console.error("MongoDB connection failed:", err));
+
 
 
 app.set('view engine', 'ejs');
@@ -92,23 +96,46 @@ app.get('/appointments', requireLogin, async (req, res) => {
 
 
 app.post('/book', requireLogin, async (req, res) => {
-  const { patientName, patientEmail, doctor, date, time } = req.body;
+  try {
+    const { patientName, patientEmail, doctor, date, time } = req.body;
 
-  if (!patientName || !patientEmail || !doctor || !date || !time) {
-    return res.render('index', { title: 'Book Appointment', error: 'All fields are required.' });
+    if (!patientName || !patientEmail || !doctor || !date || !time) {
+      return res.render('index', {
+        title: 'Book Appointment',
+        error: 'All fields are required.'
+      });
+    }
+
+    // ❌ block duplicate 15-min slot
+    const exists = await Appointment.findOne({ doctor, date, time });
+    if (exists) {
+      return res.render('index', {
+        title: 'Book Appointment',
+        error: 'This slot is already booked. Please choose another time.'
+      });
+    }
+
+    await Appointment.create({
+      patientName,
+      patientEmail,
+      doctor,
+      date,
+      time,
+      createdBy: req.session.userId
+    });
+
+    res.redirect('/appointments');
+
+  } catch (err) {
+    console.error(err);
+    res.render('index', {
+      title: 'Book Appointment',
+      error: 'Something went wrong'
+    });
   }
-
-  await Appointment.create({
-    patientName,
-    patientEmail,
-    doctor,
-    date,
-    time,
-    createdBy: req.session.userId
-  });
-
-  res.redirect('/appointments');
 });
+
+
 
 app.get('/register', (req, res) => {
   res.render('register', { title: 'Register', error: null });
@@ -164,6 +191,57 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
   });
 });
+app.get("/doctor-slots", async (req, res) => {
+  const { doctor, date } = req.query;
+
+  const allSlots = generateSlots();
+
+  const booked = await Appointment.find(
+    { doctor, date },
+    { time: 1, _id: 0 }
+  );
+
+  const bookedTimes = booked.map(a => a.time);
+
+  const freeSlots = allSlots.filter(
+    slot => !bookedTimes.includes(slot)
+  );
+
+  res.json(freeSlots);
+});
+const generateSlots = require("./utils/slots");
+function isWeekday(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  return day !== 0 && day !== 6; // no Sun, Sat
+}
+
+
+app.get("/free-slots", async (req, res) => {
+  const { doctor, date } = req.query;
+
+  if (!doctor || !date) return res.json([]);
+
+  // ❌ Weekend check
+  if (!isWeekday(date)) return res.json([]);
+
+  const allSlots = generateSlots();
+
+  const booked = await Appointment.find(
+    { doctor, date },
+    { time: 1, _id: 0 }
+  );
+
+  const bookedTimes = booked.map(b => b.time);
+
+  const freeSlots = allSlots.filter(
+    slot => !bookedTimes.includes(slot)
+  );
+
+  res.json(freeSlots);
+});
+
+
 console.log("Deploy test");
 
 app.listen(PORT, '0.0.0.0', () => {

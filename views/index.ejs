@@ -19,7 +19,7 @@
 
   <label>
     Doctor
-    <select name="doctor" required>
+    <select name="doctor" id="doctorSelect" required>
       <option value="">Select doctor</option>
       <option value="Dr. Sharma (Cardiologist)">Dr. Sharma (Cardiologist)</option>
       <option value="Dr. Gupta (Dermatologist)">Dr. Gupta (Dermatologist)</option>
@@ -29,15 +29,61 @@
 
   <label>
     Date
-    <input type="date" name="date" required>
+    <input type="date" name="date" id="appointmentDate" required>
   </label>
 
   <label>
     Time
-    <input type="time" name="time" required>
+    <select name="time" id="timeSlot" required>
+      <option value="">Select time</option>
+    </select>
   </label>
 
   <button type="submit">Book Appointment</button>
 </form>
+
+<script>
+  const doctorSelect = document.getElementById("doctorSelect");
+  const dateInput = document.getElementById("appointmentDate");
+  const timeSelect = document.getElementById("timeSlot");
+  
+  async function loadSlots() {
+    const doctor = doctorSelect.value;
+    const date = dateInput.value;
+  
+    if (!doctor || !date) {
+      timeSelect.innerHTML = "<option>Select time</option>";
+      return;
+    }
+  
+    timeSelect.innerHTML = "<option>Loading...</option>";
+  
+    try {
+      const res = await fetch(`/free-slots?doctor=${doctor}&date=${date}`);
+      const slots = await res.json();
+  
+      timeSelect.innerHTML = "";
+  
+      if (!slots.length) {
+        timeSelect.innerHTML = "<option>No slots available</option>";
+        return;
+      }
+  
+      slots.forEach(slot => {
+        const opt = document.createElement("option");
+        opt.value = slot;
+        opt.textContent = slot;
+        timeSelect.appendChild(opt);
+      });
+    } catch (err) {
+      timeSelect.innerHTML = "<option>Error loading slots</option>";
+    }
+  }
+  
+  doctorSelect.addEventListener("change", loadSlots);
+  dateInput.addEventListener("change", loadSlots);
+  </script>
+  
+  
 
 <%- include('partials/footer') %>

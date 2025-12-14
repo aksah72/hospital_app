@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+/*const mongoose = require('mongoose');
 
 const appointmentSchema = new mongoose.Schema({
   patientName: { type: String, required: true },
@@ -11,3 +11,21 @@ const appointmentSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('Appointment', appointmentSchema);
+*/
+const mongoose = require("mongoose");
+
+const appointmentSchema = new mongoose.Schema({
+  patientName: String,
+  patientEmail: String,
+  doctor: String,
+  date: String,
+  time: String,
+
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",   // 👈 must match your User model name
+    required: true
+  }
+}, { timestamps: true });
+
+module.exports = mongoose.model("Appointment", appointmentSchema);
