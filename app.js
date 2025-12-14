@@ -77,22 +77,18 @@ app.get('/', requireLogin, (req, res) => {
 });
 
 app.get('/appointments', requireLogin, async (req, res) => {
+  let query = {};
 
-  const currentUser = res.locals.currentUser;
+  if (req.session.role !== 'admin') {
+    query.createdBy = req.session.userId;
+  }
 
-  const isStaff = currentUser && currentUser.role === 'staff';
+  const appointments = await Appointment.find(query)
+    .sort({ date: 1, time: 1 });
 
-  const filter = isStaff
-    ? {}                                  // staff sees ALL
-    : { createdBy: req.session.userId };  // normal user sees ONLY their own
-
-  const appointments = await Appointment.find(filter)
-    .populate('createdBy')
-    .sort({ createdAt: -1 })
-    .lean();
-
-  res.render('appointments', { title: 'All Appointments', appointments });
+  res.render('appointments', { appointments });
 });
+
 
 
 app.post('/book', requireLogin, async (req, res) => {
