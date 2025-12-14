@@ -23,9 +23,15 @@ const appointmentSchema = new mongoose.Schema({
 
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",   // 👈 must match your User model name
+    ref: "User",
     required: true
   }
 }, { timestamps: true });
+
+// 🚫 No two appointments for same doctor + date + time
+appointmentSchema.index(
+  { doctor: 1, date: 1, time: 1 },
+  { unique: true }
+);
 
 module.exports = mongoose.model("Appointment", appointmentSchema);
