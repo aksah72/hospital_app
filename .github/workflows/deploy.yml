@@ -18,27 +18,23 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Deploy container on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            echo "🔴 Force stopping & removing container..."
-            sudo docker ps -aq --filter "name=^hospital-app$" | xargs -r sudo docker rm -f
+      - name: Deploy to EC2
+  run: |
+    echo "${{ secrets.SSH_PRIVATE_KEY }}" > hospital-key.pem
+    chmod 600 hospital-key.pem
 
-            echo "⏳ Waiting for Docker cleanup..."
-            sleep 3
+    ssh -i hospital-key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+      sudo docker rm -f hospital-app || true
 
-            echo "🧹 Pruning unused images..."
-            sudo docker image prune -af
+      sudo docker pull aksah22/hospital-app:latest
 
-            echo "📦 Pulling latest image..."
-            sudo docker pull aksah22/hospital-app:latest
+      sudo docker run -d \
+        --name hospital-app \
+        --restart unless-stopped \
+        -p 3000:3000 \
+        -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+        -e SESSION_SECRET="${{ secrets.SESSION_SECRET }}" \
+        aksah22/hospital-app:latest
+    EOF
 
-            echo "🚀 Starting container..."
-            sudo docker run -d \
-              --restart unless-stopped \
-              --name hospital-app \
-              -p 3000:3000 \
-              aksah22/hospital-app:latest
 
-            echo "✅ Deployment successful"
-          EOF
