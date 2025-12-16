@@ -18,7 +18,7 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > hospital-key.pem
           chmod 600 hospital-key.pem
 
-            - name: Build & Deploy on EC2
+      - name: Build & Deploy on EC2
         run: |
           ssh -i hospital-key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
             set -e
