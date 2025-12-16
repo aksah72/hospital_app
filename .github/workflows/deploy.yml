@@ -18,10 +18,15 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > hospital-key.pem
           chmod 600 hospital-key.pem
 
-      - name: Build & Deploy on EC2
+            - name: Build & Deploy on EC2
         run: |
           ssh -i hospital-key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
             set -e
+
+            echo "Ensuring git is installed..."
+            if ! command -v git >/dev/null 2>&1; then
+              sudo yum install -y git
+            fi
 
             APP_DIR=/home/ec2-user/hospital-appointment
             ENV_FILE=/home/ec2-user/hospital.env
@@ -42,14 +47,12 @@ jobs:
 
             echo "Stopping old container..."
             sudo docker stop hospital-app || true
-
-            echo "Removing old container..."
             sudo docker rm hospital-app || true
 
-            echo "Building new Docker image..."
+            echo "Building Docker image..."
             sudo docker build -t hospital-app:latest .
 
-            echo "Running new container..."
+            echo "Running container..."
             sudo docker run -d \
               --name hospital-app \
               --env-file $ENV_FILE \
@@ -58,3 +61,4 @@ jobs:
 
             echo "✅ Deployment completed successfully"
           EOF
+
