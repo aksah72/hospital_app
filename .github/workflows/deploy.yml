@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup SSH key
@@ -18,29 +18,43 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > hospital-key.pem
           chmod 600 hospital-key.pem
 
-      - name: Deploy container on EC2 (FINAL FIX)
+      - name: Build & Deploy on EC2
         run: |
           ssh -i hospital-key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            set +e
+            set -e
 
-            echo "Stopping container if running..."
-            sudo docker stop hospital-app >/dev/null 2>&1 || true
+            APP_DIR=/home/ec2-user/hospital-appointment
+            ENV_FILE=/home/ec2-user/hospital.env
 
-            echo "Removing container if exists..."
-            sudo docker rm hospital-app >/dev/null 2>&1 || true
+            echo "Checking env file..."
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "❌ hospital.env not found"
+              exit 1
+            fi
 
-            echo "Pulling latest image..."
-            sudo docker pull aksah22/hospital-app:latest
+            echo "Cloning or updating repository..."
+            if [ ! -d "$APP_DIR" ]; then
+              git clone https://github.com/aksah72/hospital_app.git $APP_DIR
+            fi
 
-            echo "Starting new container..."
+            cd $APP_DIR
+            git pull origin main
+
+            echo "Stopping old container..."
+            sudo docker stop hospital-app || true
+
+            echo "Removing old container..."
+            sudo docker rm hospital-app || true
+
+            echo "Building new Docker image..."
+            sudo docker build -t hospital-app:latest .
+
+            echo "Running new container..."
             sudo docker run -d \
               --name hospital-app \
-              --restart unless-stopped \
+              --env-file $ENV_FILE \
               -p 3000:3000 \
-              -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
-              -e SESSION_SECRET="${{ secrets.SESSION_SECRET }}" \
-              aksah22/hospital-app:latest
+              hospital-app:latest
 
-            echo "Deployment successful"
+            echo "✅ Deployment completed successfully"
           EOF
-
