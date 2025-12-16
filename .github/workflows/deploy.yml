@@ -18,18 +18,21 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > hospital-key.pem
           chmod 600 hospital-key.pem
 
-      - name: Deploy container on EC2
+            - name: Deploy container on EC2 (FINAL FIX)
         run: |
-          ssh -i hospital-key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << EOF
+          ssh -i hospital-key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
             set +e
 
-            echo "Removing old container if exists"
-            sudo docker rm -f hospital-app 2>/dev/null || true
+            echo "Stopping container if running..."
+            sudo docker stop hospital-app >/dev/null 2>&1 || true
 
-            echo "Pulling image"
+            echo "Removing container if exists..."
+            sudo docker rm hospital-app >/dev/null 2>&1 || true
+
+            echo "Pulling latest image..."
             sudo docker pull aksah22/hospital-app:latest
 
-            echo "Starting container"
+            echo "Starting new container..."
             sudo docker run -d \
               --name hospital-app \
               --restart unless-stopped \
@@ -37,5 +40,7 @@ jobs:
               -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
               -e SESSION_SECRET="${{ secrets.SESSION_SECRET }}" \
               aksah22/hospital-app:latest
-            echo "Deploy completed"
+
+            echo "Deployment successful"
           EOF
+
