@@ -1,4 +1,4 @@
-name: Deploy to EC2 Server
+name: Deploy to EC2
 
 on:
   push:
@@ -10,31 +10,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up SSH agent
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Setup SSH key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > hospital-key.pem
+          chmod 600 hospital-key.pem
 
       - name: Deploy to EC2
-  run: |
-    echo "${{ secrets.SSH_PRIVATE_KEY }}" > hospital-key.pem
-    chmod 600 hospital-key.pem
-
-    ssh -i hospital-key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-      sudo docker rm -f hospital-app || true
-
-      sudo docker pull aksah22/hospital-app:latest
-
-      sudo docker run -d \
-        --name hospital-app \
-        --restart unless-stopped \
-        -p 3000:3000 \
-        -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
-        -e SESSION_SECRET="${{ secrets.SESSION_SECRET }}" \
-        aksah22/hospital-app:latest
-    EOF
-
-
+        run: |
+          ssh -i hospital-key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << EOF
+            sudo docker rm -f hospital-app || true
+            sudo docker pull aksah22/hospital-app:latest
+            sudo docker run -d \
+              --name hospital-app \
+              --restart unless-stopped \
+              -p 3000:3000 \
+              -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              -e SESSION_SECRET="${{ secrets.SESSION_SECRET }}" \
+              aksah22/hospital-app:latest
+          EOF
