@@ -1,0 +1,38 @@
+<%- include('partials/header', { title: 'All Appointments' }) %>
+
+<h2>All Booked Appointments</h2>
+
+<% if (!appointments.length) { %>
+  <p>No appointments yet. <a href="/">Book one now</a>.</p>
+<% } else { %>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Patient</th>
+        <th>Email</th>
+        <th>Doctor</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Booked By</th>
+        <th>Booked At</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% appointments.forEach(function(a, index) { %>
+        <tr>
+          <td><%= index + 1 %></td>
+          <td><%= a.patientName %></td>
+          <td><%= a.patientEmail %></td>
+          <td><%= a.doctor %></td>
+          <td><%= a.date %></td>
+          <td><%= a.time %></td>
+          <td><%= a.createdBy ? a.createdBy.name : 'N/A' %></td>
+          <td><%= new Date(a.createdAt).toLocaleString() %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>
+
+<%- include('partials/footer') %>

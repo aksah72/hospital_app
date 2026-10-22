@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hospital Login</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+</head>
+<body>
+
+<div class="container">
+  <div class="left">
+    <img src="/images/hospital.svg" alt="Hospital" />
+    <h2>Hospital Appointment System</h2>
+    <p>⏰ OPD Timings: 09:00 AM – 6:00 PM</p>
+    <p>📞 Emergency: 24×7 Available</p>
+  </div>
+
+  <div class="right">
+    <h2>Login</h2>
+
+    <% if (error) { %>
+      <p class="error"><%= error %></p>
+    <% } %>
+
+    <form method="POST" action="/login">
+      <label>Email</label>
+      <input type="email" name="email" required />
+
+      <label>Password</label>
+      <input type="password" name="password" required />
+
+      <label>Login As</label>
+      <select name="role" required>
+        <option value="staff">Staff</option>
+        <option value="admin">Admin</option>
+        <option value="others">Others</option>
+      </select>
+
+      <button type="submit">Login</button>
+    </form>
+
+    <p class="link">
+      New user? <a href="/register">Register here</a>
+    </p>
+  </div>
+</div>
+
+</body>
+</html>
